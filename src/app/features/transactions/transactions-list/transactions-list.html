@@ -1,0 +1,93 @@
+<header class="page-header">
+  <h1>Transações</h1>
+  <a mat-flat-button color="primary" routerLink="/transactions/new">
+    <mat-icon>add</mat-icon>
+    Nova transação
+  </a>
+</header>
+
+<div class="month-nav">
+  <button mat-icon-button (click)="previousMonth()" aria-label="Mês anterior">
+    <mat-icon>chevron_left</mat-icon>
+  </button>
+  <span class="month-label">{{ monthLabel() }}</span>
+  <button mat-icon-button (click)="nextMonth()" aria-label="Próximo mês">
+    <mat-icon>chevron_right</mat-icon>
+  </button>
+</div>
+
+@if (errorMessage()) {
+  <p class="error">{{ errorMessage() }}</p>
+}
+
+@if (loading()) {
+  <mat-spinner diameter="32" />
+} @else if (filteredTransactions().length === 0) {
+  <p>Nenhuma transação neste mês.</p>
+} @else {
+  <table mat-table [dataSource]="filteredTransactions()" class="transactions-table">
+    <ng-container matColumnDef="date">
+      <th mat-header-cell *matHeaderCellDef>Data</th>
+      <td mat-cell *matCellDef="let transaction">
+        {{ transaction.date.split('-').reverse().join('/') }}
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="description">
+      <th mat-header-cell *matHeaderCellDef>Descrição</th>
+      <td mat-cell *matCellDef="let transaction">
+        {{ transaction.description }}
+        @if (transaction.recurrenceId) {
+          <mat-icon class="recurrence-icon" matTooltip="Recorrente">repeat</mat-icon>
+        }
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="category">
+      <th mat-header-cell *matHeaderCellDef>Categoria</th>
+      <td mat-cell *matCellDef="let transaction">{{ categoryLabel(transaction) }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="account">
+      <th mat-header-cell *matHeaderCellDef>Conta</th>
+      <td mat-cell *matCellDef="let transaction">{{ accountLabel(transaction) }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="tags">
+      <th mat-header-cell *matHeaderCellDef>Tags</th>
+      <td mat-cell *matCellDef="let transaction">
+        @if (tagNames(transaction).length > 0) {
+          <mat-chip-set>
+            @for (name of tagNames(transaction); track name) {
+              <mat-chip>{{ name }}</mat-chip>
+            }
+          </mat-chip-set>
+        } @else {
+          -
+        }
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="amount">
+      <th mat-header-cell *matHeaderCellDef>Valor</th>
+      <td mat-cell *matCellDef="let transaction" [class.income]="transaction.type === 'income'" [class.expense]="transaction.type === 'expense'">
+        {{ formatAmount(transaction) }}
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef></th>
+      <td mat-cell *matCellDef="let transaction">
+        <a mat-icon-button [routerLink]="['/transactions', transaction.id, 'edit']">
+          <mat-icon>edit</mat-icon>
+        </a>
+        <button mat-icon-button (click)="remove(transaction)">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+  </table>
+}

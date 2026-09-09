@@ -1,0 +1,139 @@
+<header class="page-header">
+  <h1>{{ isEditMode ? 'Editar transação' : 'Nova transação' }}</h1>
+  <a mat-button routerLink="/transactions">Voltar</a>
+</header>
+
+<mat-card>
+  <mat-card-content>
+    <form class="transaction-form" [formGroup]="form" (ngSubmit)="submit()">
+      <mat-button-toggle-group formControlName="type" class="type-toggle">
+        <mat-button-toggle value="expense">Despesa</mat-button-toggle>
+        <mat-button-toggle value="income">Receita</mat-button-toggle>
+        <mat-button-toggle value="transfer">Transferência</mat-button-toggle>
+      </mat-button-toggle-group>
+
+      @if (originalTransaction()?.recurrenceId) {
+        <p class="recurring-note">
+          <mat-icon>repeat</mat-icon>
+          Esta transação faz parte de uma recorrência. A data não pode ser alterada aqui.
+        </p>
+      }
+
+      <mat-form-field appearance="outline">
+        <mat-label>Descrição</mat-label>
+        <input matInput formControlName="description" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Valor (R$)</mat-label>
+        <input matInput type="number" step="0.01" formControlName="amount" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Data</mat-label>
+        <input matInput [matDatepicker]="picker" formControlName="date" />
+        <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>{{ isTransfer() ? 'Conta de origem' : 'Conta' }}</mat-label>
+        <mat-select formControlName="accountId">
+          @for (account of accountOptions(); track account.id) {
+            <mat-option [value]="account.id">
+              {{ account.name }}{{ account.active ? '' : ' (inativa)' }}
+            </mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      @if (isTransfer()) {
+        <mat-form-field appearance="outline">
+          <mat-label>Conta de destino</mat-label>
+          <mat-select formControlName="destinationAccountId">
+            @for (account of destinationAccountOptions(); track account.id) {
+              <mat-option [value]="account.id">
+                {{ account.name }}{{ account.active ? '' : ' (inativa)' }}
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      } @else {
+        <mat-form-field appearance="outline">
+          <mat-label>Categoria</mat-label>
+          <mat-select formControlName="categoryId">
+            <mat-option value="">-</mat-option>
+            @for (category of categoryOptions(); track category.id) {
+              <mat-option [value]="category.id">
+                {{ category.name }}{{ category.active ? '' : ' (inativa)' }}
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Subcategoria</mat-label>
+          <mat-select formControlName="subcategoryId">
+            <mat-option value="">-</mat-option>
+            @for (subcategory of subcategoryOptions(); track subcategory.id) {
+              <mat-option [value]="subcategory.id">
+                {{ subcategory.name }}{{ subcategory.active ? '' : ' (inativa)' }}
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Tags</mat-label>
+          <mat-select formControlName="tagIds" multiple>
+            @for (tag of tags(); track tag.id) {
+              <mat-option [value]="tag.id">{{ tag.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
+
+      <mat-form-field appearance="outline">
+        <mat-label>Observação</mat-label>
+        <textarea matInput formControlName="note" rows="2"></textarea>
+      </mat-form-field>
+
+      @if (!isEditMode) {
+        <mat-checkbox formControlName="isRecurring">É recorrente?</mat-checkbox>
+
+        @if (isRecurringValue()) {
+          <div class="recurrence-options">
+            <mat-form-field appearance="outline">
+              <mat-label>Frequência</mat-label>
+              <mat-select formControlName="frequency">
+                <mat-option value="daily">Diariamente</mat-option>
+                <mat-option value="weekly">Semanalmente</mat-option>
+                <mat-option value="monthly">Mensalmente</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-radio-group formControlName="endType" class="end-type-group">
+              <mat-radio-button value="indeterminate">Por tempo indeterminado</mat-radio-button>
+              <mat-radio-button value="count">Número de vezes</mat-radio-button>
+            </mat-radio-group>
+
+            @if (endTypeValue() === 'count') {
+              <mat-form-field appearance="outline">
+                <mat-label>Quantas vezes</mat-label>
+                <input matInput type="number" min="1" step="1" formControlName="occurrenceCount" />
+              </mat-form-field>
+            }
+          </div>
+        }
+      }
+
+      @if (errorMessage()) {
+        <p class="error">{{ errorMessage() }}</p>
+      }
+
+      <button mat-flat-button color="primary" type="submit" [disabled]="loading()">
+        {{ loading() ? 'Salvando...' : 'Salvar' }}
+      </button>
+    </form>
+  </mat-card-content>
+</mat-card>

@@ -1,0 +1,64 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // resource == null cobre o caso de checar existência de um doc antes de criá-lo (ex.: geração idempotente de recorrências)
+    function isOwner() {
+      return isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
+    }
+
+    function isOwnerOnCreate() {
+      return isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    // cada coleção pertence ao usuário via campo userId; só o dono pode ler/escrever
+    match /accounts/{docId} {
+      allow read, update, delete: if isOwner();
+      allow create: if isOwnerOnCreate();
+    }
+
+    match /categories/{docId} {
+      allow read, update, delete: if isOwner();
+      allow create: if isOwnerOnCreate();
+    }
+
+    match /subcategories/{docId} {
+      allow read, update, delete: if isOwner();
+      allow create: if isOwnerOnCreate();
+    }
+
+    match /tags/{docId} {
+      allow read, update, delete: if isOwner();
+      allow create: if isOwnerOnCreate();
+    }
+
+    match /transactions/{docId} {
+      allow read, update, delete: if isOwner();
+      allow create: if isOwnerOnCreate();
+    }
+
+    match /creditCards/{docId} {
+      allow read, update, delete: if isOwner();
+      allow create: if isOwnerOnCreate();
+    }
+
+    match /invoices/{docId} {
+      allow read, update, delete: if isOwner();
+      allow create: if isOwnerOnCreate();
+    }
+
+    match /recurrences/{docId} {
+      allow read, update, delete: if isOwner();
+      allow create: if isOwnerOnCreate();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

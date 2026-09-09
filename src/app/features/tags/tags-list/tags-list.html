@@ -1,0 +1,33 @@
+<header class="page-header">
+  <h1>Tags</h1>
+  <button mat-flat-button color="primary" (click)="openTagDialog()">
+    <mat-icon>add</mat-icon>
+    Nova tag
+  </button>
+</header>
+
+@if (errorMessage()) {
+  <p class="error">{{ errorMessage() }}</p>
+}
+
+@if (loading()) {
+  <mat-spinner diameter="32" />
+} @else if (tags().length === 0) {
+  <p>Nenhuma tag cadastrada ainda.</p>
+} @else {
+  <mat-list>
+    @for (tag of tags(); track tag.id) {
+      <mat-list-item>
+        <span matListItemTitle>{{ tag.name }}</span>
+        <span matListItemMeta class="row-actions">
+          <button mat-icon-button (click)="openTagDialog(tag)">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button (click)="remove(tag)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </span>
+      </mat-list-item>
+    }
+  </mat-list>
+}

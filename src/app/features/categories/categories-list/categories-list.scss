@@ -1,0 +1,42 @@
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+
+  h1 {
+    margin: 0;
+  }
+}
+
+.error {
+  color: var(--mat-sys-error);
+}
+
+.categories-accordion {
+  margin-bottom: 1.5rem;
+
+  .mat-expansion-panel.inactive {
+    opacity: 0.6;
+  }
+}
+
+.subcategory-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0;
+
+  &.inactive {
+    opacity: 0.5;
+  }
+
+  .row-actions {
+    display: flex;
+  }
+}
+
+.empty-subcategories {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.875rem;
+}

@@ -1,0 +1,36 @@
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+
+  h1 {
+    margin: 0;
+  }
+}
+
+.account-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 420px;
+
+  .color-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.875rem;
+    padding: 0 0.25rem 0.5rem;
+  }
+
+  button {
+    margin-top: 0.5rem;
+    align-self: flex-start;
+  }
+
+  .error {
+    color: var(--mat-sys-error);
+    font-size: 0.875rem;
+    margin: 0;
+  }
+}

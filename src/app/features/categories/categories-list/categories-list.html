@@ -1,0 +1,60 @@
+<header class="page-header">
+  <h1>Categorias</h1>
+  <button mat-flat-button color="primary" (click)="openCategoryDialog()">
+    <mat-icon>add</mat-icon>
+    Nova categoria
+  </button>
+</header>
+
+@if (errorMessage()) {
+  <p class="error">{{ errorMessage() }}</p>
+}
+
+@if (loading()) {
+  <mat-spinner diameter="32" />
+} @else {
+  @for (group of groups(); track group.label) {
+    <h2>{{ group.label }}</h2>
+
+    @if (group.categories.length === 0) {
+      <p>Nenhuma categoria cadastrada.</p>
+    } @else {
+      <mat-accordion class="categories-accordion">
+        @for (category of group.categories; track category.id) {
+          <mat-expansion-panel [class.inactive]="!category.active">
+            <mat-expansion-panel-header>
+              <mat-panel-title>{{ category.name }}</mat-panel-title>
+              @if (!category.active) {
+                <mat-panel-description>Inativa</mat-panel-description>
+              }
+            </mat-expansion-panel-header>
+
+            @for (subcategory of subcategoriesFor(category.id); track subcategory.id) {
+              <div class="subcategory-row" [class.inactive]="!subcategory.active">
+                <span>{{ subcategory.name }}</span>
+                <span class="row-actions">
+                  <button mat-icon-button (click)="openSubcategoryDialog(category.id, subcategory)">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="toggleSubcategoryActive(subcategory)">
+                    <mat-icon>{{ subcategory.active ? 'visibility_off' : 'visibility' }}</mat-icon>
+                  </button>
+                </span>
+              </div>
+            } @empty {
+              <p class="empty-subcategories">Nenhuma subcategoria.</p>
+            }
+
+            <mat-action-row>
+              <button mat-button (click)="openSubcategoryDialog(category.id)">+ Subcategoria</button>
+              <button mat-button (click)="openCategoryDialog(category)">Editar</button>
+              <button mat-button (click)="toggleCategoryActive(category)">
+                {{ category.active ? 'Desativar' : 'Ativar' }}
+              </button>
+            </mat-action-row>
+          </mat-expansion-panel>
+        }
+      </mat-accordion>
+    }
+  }
+}

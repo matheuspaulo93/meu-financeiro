@@ -1,0 +1,43 @@
+<mat-sidenav-container class="shell-container">
+  <mat-sidenav #sidenav mode="over" class="shell-sidenav">
+    <mat-nav-list>
+      <a mat-list-item routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="sidenav.close()">
+        <mat-icon matListItemIcon>dashboard</mat-icon>
+        <span matListItemTitle>Dashboard</span>
+      </a>
+      <a mat-list-item routerLink="/accounts" routerLinkActive="active" (click)="sidenav.close()">
+        <mat-icon matListItemIcon>account_balance_wallet</mat-icon>
+        <span matListItemTitle>Contas</span>
+      </a>
+      <a mat-list-item routerLink="/categories" routerLinkActive="active" (click)="sidenav.close()">
+        <mat-icon matListItemIcon>category</mat-icon>
+        <span matListItemTitle>Categorias</span>
+      </a>
+      <a mat-list-item routerLink="/tags" routerLinkActive="active" (click)="sidenav.close()">
+        <mat-icon matListItemIcon>sell</mat-icon>
+        <span matListItemTitle>Tags</span>
+      </a>
+      <a mat-list-item routerLink="/transactions" routerLinkActive="active" (click)="sidenav.close()">
+        <mat-icon matListItemIcon>receipt_long</mat-icon>
+        <span matListItemTitle>Transações</span>
+      </a>
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar color="primary">
+      <button mat-icon-button (click)="sidenav.toggle()">
+        <mat-icon>menu</mat-icon>
+      </button>
+      <span class="shell-title">Meu Financeiro</span>
+      <span class="shell-spacer"></span>
+      <button mat-icon-button (click)="logout()">
+        <mat-icon>logout</mat-icon>
+      </button>
+    </mat-toolbar>
+
+    <main class="shell-content">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

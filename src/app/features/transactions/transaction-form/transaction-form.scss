@@ -1,0 +1,54 @@
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+
+  h1 {
+    margin: 0;
+  }
+}
+
+.transaction-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 480px;
+
+  .type-toggle {
+    margin-bottom: 0.5rem;
+    align-self: flex-start;
+  }
+
+  .recurring-note {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .recurrence-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0.25rem 0 0.5rem;
+  }
+
+  .end-type-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  button[type='submit'] {
+    margin-top: 0.5rem;
+    align-self: flex-start;
+  }
+
+  .error {
+    color: var(--mat-sys-error);
+    font-size: 0.875rem;
+    margin: 0;
+  }
+}
