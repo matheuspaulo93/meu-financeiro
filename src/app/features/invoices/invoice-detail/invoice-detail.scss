@@ -1,0 +1,98 @@
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+
+  .header-title {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    h1 {
+      margin: 0;
+    }
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+.open-chip {
+  background-color: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+}
+
+.paid-chip {
+  background-color: #e6f4ea;
+  color: #137333;
+  font-weight: 500;
+}
+
+.invoice-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+
+  .summary-card {
+    background-color: var(--mat-sys-surface-container-low);
+  }
+
+  .total-card {
+    background-color: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+  }
+
+  .paid-card {
+    background-color: #e6f4ea;
+    color: #137333;
+  }
+}
+
+.invoice-items-section {
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+
+    h2 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+  }
+
+  .items-table {
+    width: 100%;
+
+    .amount-cell {
+      font-weight: 600;
+    }
+
+    .item-note {
+      display: block;
+      color: var(--mat-sys-outline);
+      font-size: 0.75rem;
+    }
+
+    .tag-badge {
+      display: inline-block;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      background-color: var(--mat-sys-surface-container-high);
+      margin-right: 0.25rem;
+    }
+  }
+}
+
+.error {
+  color: var(--mat-sys-error);
+}
+

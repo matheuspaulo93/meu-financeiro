@@ -1,0 +1,25 @@
+<h2 mat-dialog-title>Pagar fatura — {{ data.cardName }}</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form" class="pay-form">
+    <mat-form-field appearance="outline">
+      <mat-label>Data do pagamento</mat-label>
+      <input matInput [matDatepicker]="picker" formControlName="paidAt" />
+      <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+      <mat-datepicker #picker></mat-datepicker>
+      <mat-hint>Data que o débito constará na conta corrente</mat-hint>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Valor a pagar (R$)</mat-label>
+      <input matInput type="number" step="0.01" formControlName="paidAmount" />
+      <mat-hint>Valor total da fatura por padrão</mat-hint>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>Cancelar</button>
+  <button mat-flat-button color="primary" (click)="confirm()">Confirmar pagamento</button>
+</mat-dialog-actions>
+

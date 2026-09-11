@@ -70,4 +70,32 @@ export class TransactionService {
   async remove(id: string): Promise<void> {
     await deleteDoc(doc(db, COLLECTION, id));
   }
+
+  async listByInvoice(invoiceId: string): Promise<Transaction[]> {
+    const userId = this.requireUserId();
+    const q = query(
+      collection(db, COLLECTION),
+      where('userId', '==', userId),
+      where('invoiceId', '==', invoiceId),
+    );
+    const snapshot = await getDocs(q);
+    const transactions = snapshot.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<Transaction, 'id'>) }) as Transaction)
+      .filter((t) => !t.isInvoicePayment);
+    return transactions.sort((a, b) => b.date.localeCompare(a.date));
+  }
+
+  async listByInstallmentGroup(installmentGroupId: string): Promise<Transaction[]> {
+    const userId = this.requireUserId();
+    const q = query(
+      collection(db, COLLECTION),
+      where('userId', '==', userId),
+      where('installmentGroupId', '==', installmentGroupId),
+    );
+    const snapshot = await getDocs(q);
+    const transactions = snapshot.docs.map(
+      (d) => ({ id: d.id, ...(d.data() as Omit<Transaction, 'id'>) }) as Transaction,
+    );
+    return transactions.sort((a, b) => (a.installmentNumber ?? 0) - (b.installmentNumber ?? 0));
+  }
 }

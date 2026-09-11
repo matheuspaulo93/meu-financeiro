@@ -20,6 +20,23 @@
     align-self: flex-start;
   }
 
+  .payment-method-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-bottom: 0.75rem;
+
+    .section-label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    .payment-toggle {
+      align-self: flex-start;
+    }
+  }
+
   .recurring-note {
     display: flex;
     align-items: center;

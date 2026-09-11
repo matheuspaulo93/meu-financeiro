@@ -9,23 +9,41 @@
   }
 }
 
-.month-nav {
+.filters-bar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
 
-  .month-label {
-    min-width: 160px;
-    text-align: center;
-    font-weight: 500;
-    text-transform: capitalize;
+  .month-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    .month-label {
+      min-width: 150px;
+      text-align: center;
+      font-weight: 500;
+      font-size: 1.05rem;
+      text-transform: capitalize;
+    }
+  }
+
+  .account-filter {
+    min-width: 240px;
   }
 }
 
 .error {
   color: var(--mat-sys-error);
+}
+
+.empty-state {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.95rem;
+  padding: 1.5rem 0;
 }
 
 .transactions-table {
@@ -48,5 +66,263 @@
     vertical-align: middle;
     margin-left: 0.25rem;
     color: var(--mat-sys-on-surface-variant);
+  }
+
+  .invoice-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    text-decoration: none;
+    color: var(--mat-sys-primary);
+    font-weight: 500;
+
+    &:hover {
+      text-decoration: underline;
+    }
+
+    .invoice-icon {
+      font-size: 1.1rem;
+      height: 1.1rem;
+      width: 1.1rem;
+    }
+  }
+
+  .day-summary-row {
+    background-color: var(--mat-sys-surface-container);
+  }
+
+  .day-summary-cell {
+    padding: 0.75rem 1rem !important;
+    border-top: 1px dashed var(--mat-sys-outline-variant);
+    border-bottom: 2px solid var(--mat-sys-outline-variant);
+  }
+
+  .day-summary-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+
+    .day-summary-left {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+
+      .day-date {
+        font-weight: 600;
+      }
+
+      .day-count,
+      .day-divider,
+      .day-net-label {
+        color: var(--mat-sys-on-surface-variant);
+      }
+
+      .day-net-value {
+        font-weight: 600;
+      }
+    }
+
+    .day-summary-right {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.875rem;
+
+      .balance-icon {
+        font-size: 1.1rem;
+        height: 1.1rem;
+        width: 1.1rem;
+        color: var(--mat-sys-primary);
+      }
+
+      .balance-label {
+        color: var(--mat-sys-on-surface-variant);
+        font-weight: 500;
+      }
+
+      .balance-value {
+        font-size: 0.95rem;
+        font-weight: 700;
+      }
+    }
+  }
+}
+
+/* =========================================================
+   Mobile (<= 650px): Transações viram cards sem scroll horizontal
+   ========================================================= */
+@media (max-width: 650px) {
+  .filters-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+
+    .month-nav {
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .account-filter {
+      width: 100%;
+    }
+  }
+
+  .transactions-table {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    border: none;
+
+    thead,
+    tr.mat-mdc-header-row {
+      display: none;
+    }
+
+    tbody {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    tr.mat-mdc-row:not(.day-summary-row) {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-areas:
+        "desc amount"
+        "meta acc"
+        "tags actions";
+      align-items: center;
+      gap: 0.35rem 0.5rem;
+      padding: 0.75rem 0.85rem;
+      background-color: var(--mat-sys-surface-container-low);
+      border: 1px solid var(--mat-sys-outline-variant);
+      border-radius: 12px;
+      height: auto;
+      min-height: unset;
+    }
+
+    .mat-mdc-cell {
+      padding: 0 !important;
+      border-bottom: none !important;
+      height: auto;
+      min-height: unset;
+    }
+
+    .mat-column-date {
+      display: none;
+    }
+
+    .mat-column-description {
+      grid-area: desc;
+      font-weight: 500;
+      font-size: 0.95rem;
+      word-break: break-word;
+    }
+
+    .mat-column-amount {
+      grid-area: amount;
+      font-size: 1.05rem;
+      font-weight: 700;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .mat-column-category {
+      grid-area: meta;
+      font-size: 0.8rem;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    .mat-column-account {
+      grid-area: acc;
+      font-size: 0.8rem;
+      color: var(--mat-sys-on-surface-variant);
+      text-align: right;
+    }
+
+    .mat-column-tags {
+      grid-area: tags;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+
+      .no-tags {
+        display: none;
+      }
+
+      .mat-mdc-chip-set {
+        margin: 0;
+      }
+
+      .mat-mdc-chip {
+        font-size: 0.7rem;
+        min-height: 20px;
+        height: 20px;
+        padding: 0 6px;
+      }
+    }
+
+    .mat-column-actions {
+      grid-area: actions;
+      justify-self: end;
+      display: flex;
+      align-items: center;
+
+      button[mat-icon-button],
+      a[mat-icon-button] {
+        width: 32px;
+        height: 32px;
+        padding: 4px;
+
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+        }
+      }
+
+      .invoice-btn {
+        font-size: 0.75rem;
+        height: 28px;
+      }
+    }
+
+    tr.day-summary-row {
+      display: block;
+      margin: 0.25rem 0 1rem 0;
+      border-radius: 12px;
+      background-color: var(--mat-sys-surface-container);
+      border: 1px solid var(--mat-sys-outline-variant);
+      height: auto;
+      min-height: unset;
+
+      .day-summary-cell {
+        display: block;
+        padding: 0.75rem 0.85rem !important;
+        border: none !important;
+      }
+
+      .day-summary-container {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+
+        .day-summary-left,
+        .day-summary-right {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          width: 100%;
+        }
+
+        .day-summary-right {
+          border-top: 1px dashed var(--mat-sys-outline-variant);
+          padding-top: 0.4rem;
+        }
+      }
+    }
   }
 }

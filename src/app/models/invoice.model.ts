@@ -11,6 +11,8 @@ export interface Invoice {
   status: InvoiceStatus;
   /** valor total em centavos, soma das transações vinculadas */
   total: number;
+  /** valor efetivamente pago em centavos */
+  paidAmount?: number;
   paidAt?: string;
   paymentTransactionId?: EntityId;
 }

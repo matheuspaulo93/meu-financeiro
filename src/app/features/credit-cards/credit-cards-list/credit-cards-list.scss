@@ -13,7 +13,7 @@
   color: var(--mat-sys-error);
 }
 
-.accounts-table {
+.cards-table {
   width: 100%;
 
   tr.inactive {
@@ -21,11 +21,8 @@
   }
 }
 
-/* =========================================================
-   Layout Responsivo Mobile (<= 650px)
-   ========================================================= */
 @media (max-width: 650px) {
-  .accounts-table {
+  .cards-table {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;

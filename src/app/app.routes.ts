@@ -41,6 +41,32 @@ export const routes: Routes = [
         ],
       },
       {
+        path: 'credit-cards',
+        children: [
+          {
+            path: '',
+            loadComponent: () =>
+              import('./features/credit-cards/credit-cards-list/credit-cards-list').then(
+                (m) => m.CreditCardsList,
+              ),
+          },
+          {
+            path: 'new',
+            loadComponent: () =>
+              import('./features/credit-cards/credit-card-form/credit-card-form').then(
+                (m) => m.CreditCardForm,
+              ),
+          },
+          {
+            path: ':id/edit',
+            loadComponent: () =>
+              import('./features/credit-cards/credit-card-form/credit-card-form').then(
+                (m) => m.CreditCardForm,
+              ),
+          },
+        ],
+      },
+      {
         path: 'categories',
         loadComponent: () =>
           import('./features/categories/categories-list/categories-list').then(
@@ -77,6 +103,13 @@ export const routes: Routes = [
               ),
           },
         ],
+      },
+      {
+        path: 'invoices/:id',
+        loadComponent: () =>
+          import('./features/invoices/invoice-detail/invoice-detail').then(
+            (m) => m.InvoiceDetail,
+          ),
       },
     ],
   },

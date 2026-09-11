@@ -1,5 +1,5 @@
 <header class="page-header">
-  <h1>{{ isEditMode ? 'Editar transação' : 'Nova transação' }}</h1>
+  <h2>{{ isEditMode ? 'Editar transação' : 'Nova transação' }}</h2>
   <a mat-button routerLink="/transactions">Voltar</a>
 </header>
 
@@ -11,6 +11,16 @@
         <mat-button-toggle value="income">Receita</mat-button-toggle>
         <mat-button-toggle value="transfer">Transferência</mat-button-toggle>
       </mat-button-toggle-group>
+
+      @if (isExpense() && !isEditMode) {
+        <div class="payment-method-container">
+          <label class="section-label">Forma de pagamento:</label>
+          <mat-button-toggle-group formControlName="paymentMethod" class="payment-toggle">
+            <mat-button-toggle value="debit">Débito</mat-button-toggle>
+            <mat-button-toggle value="credit">Crédito</mat-button-toggle>
+          </mat-button-toggle-group>
+        </div>
+      }
 
       @if (originalTransaction()?.recurrenceId) {
         <p class="recurring-note">
@@ -25,27 +35,58 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>Valor (R$)</mat-label>
+        <mat-label>{{ isCredit() ? 'Valor total (R$)' : 'Valor (R$)' }}</mat-label>
         <input matInput type="number" step="0.01" formControlName="amount" />
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>Data</mat-label>
+        <mat-label>{{ isCredit() ? 'Data da compra' : 'Data' }}</mat-label>
         <input matInput [matDatepicker]="picker" formControlName="date" />
         <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
         <mat-datepicker #picker></mat-datepicker>
       </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>{{ isTransfer() ? 'Conta de origem' : 'Conta' }}</mat-label>
-        <mat-select formControlName="accountId">
-          @for (account of accountOptions(); track account.id) {
-            <mat-option [value]="account.id">
-              {{ account.name }}{{ account.active ? '' : ' (inativa)' }}
-            </mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      @if (isCredit()) {
+        <mat-form-field appearance="outline">
+          <mat-label>Cartão de crédito</mat-label>
+          <mat-select formControlName="creditCardId">
+            @for (card of cardOptions(); track card.id) {
+              <mat-option [value]="card.id">
+                {{ card.name }}{{ card.active ? '' : ' (inativo)' }}
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        @if (form.controls.creditCardId.value) {
+          <mat-form-field appearance="outline">
+            <mat-label>Quantidade de parcelas</mat-label>
+            <input matInput type="number" min="1" max="24" step="1" formControlName="installments" />
+            <mat-hint>1 para à vista na fatura, ou informe o número de parcelas</mat-hint>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Primeira fatura</mat-label>
+            <mat-select formControlName="firstInvoiceDueDate">
+              @for (option of upcomingInvoices(); track option.dueDate) {
+                <mat-option [value]="option.dueDate">{{ option.label }}</mat-option>
+              }
+            </mat-select>
+            <mat-hint>Fatura em que virá a 1ª parcela</mat-hint>
+          </mat-form-field>
+        }
+      } @else {
+        <mat-form-field appearance="outline">
+          <mat-label>{{ isTransfer() ? 'Conta de origem' : 'Conta' }}</mat-label>
+          <mat-select formControlName="accountId">
+            @for (account of accountOptions(); track account.id) {
+              <mat-option [value]="account.id">
+                {{ account.name }}{{ account.active ? '' : ' (inativa)' }}
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
 
       @if (isTransfer()) {
         <mat-form-field appearance="outline">
@@ -98,7 +139,7 @@
         <textarea matInput formControlName="note" rows="2"></textarea>
       </mat-form-field>
 
-      @if (!isEditMode) {
+      @if (!isEditMode && !isCredit()) {
         <mat-checkbox formControlName="isRecurring">É recorrente?</mat-checkbox>
 
         @if (isRecurringValue()) {

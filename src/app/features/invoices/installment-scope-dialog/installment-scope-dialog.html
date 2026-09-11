@@ -1,0 +1,21 @@
+<h2 mat-dialog-title>
+  {{ data.action === 'edit' ? 'Alterar compra parcelada' : 'Excluir compra parcelada' }}
+</h2>
+
+<mat-dialog-content>
+  <p>
+    Esta é a parcela <strong>{{ data.installmentNumber }} de {{ data.installmentTotal }}</strong>.
+    Como você deseja aplicar esta {{ data.action === 'edit' ? 'alteração' : 'exclusão' }}?
+  </p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>Cancelar</button>
+  <button mat-stroked-button (click)="choose('only')">
+    Apenas esta parcela
+  </button>
+  <button mat-flat-button color="primary" (click)="choose('future')">
+    Esta e as seguintes ({{ data.installmentNumber }} a {{ data.installmentTotal }})
+  </button>
+</mat-dialog-actions>
+

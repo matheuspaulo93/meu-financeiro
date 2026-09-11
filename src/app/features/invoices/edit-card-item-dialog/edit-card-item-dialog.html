@@ -1,0 +1,57 @@
+<h2 mat-dialog-title>
+  Editar item da fatura
+  @if (data.transaction.installmentTotal && data.transaction.installmentTotal > 1) {
+    (Parcela {{ data.transaction.installmentNumber }}/{{ data.transaction.installmentTotal }})
+  }
+</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form" class="edit-item-form">
+    <mat-form-field appearance="outline">
+      <mat-label>Descrição</mat-label>
+      <input matInput formControlName="description" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Valor (R$)</mat-label>
+      <input matInput type="number" step="0.01" formControlName="amount" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Categoria</mat-label>
+      <mat-select formControlName="categoryId">
+        <mat-option value="">Sem categoria</mat-option>
+        @for (cat of availableCategories(); track cat.id) {
+          <mat-option [value]="cat.id">{{ cat.name }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    @if (form.controls.categoryId.value && availableSubcategories().length > 0) {
+      <mat-form-field appearance="outline">
+        <mat-label>Subcategoria</mat-label>
+        <mat-select formControlName="subcategoryId">
+          <mat-option value="">Sem subcategoria</mat-option>
+          @for (sub of availableSubcategories(); track sub.id) {
+            <mat-option [value]="sub.id">{{ sub.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    }
+
+    <mat-form-field appearance="outline">
+      <mat-label>Tags</mat-label>
+      <mat-select formControlName="tagIds" multiple>
+        @for (tag of data.tags; track tag.id) {
+          <mat-option [value]="tag.id">{{ tag.name }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>Cancelar</button>
+  <button mat-flat-button color="primary" (click)="confirm()">Salvar</button>
+</mat-dialog-actions>
+
