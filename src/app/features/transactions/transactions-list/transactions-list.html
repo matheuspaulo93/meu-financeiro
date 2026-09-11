@@ -19,7 +19,7 @@
 
   <mat-form-field appearance="outline" class="account-filter" subscriptSizing="dynamic">
     <mat-label>Conta</mat-label>
-    <mat-select [value]="selectedAccountId()" (selectionChange)="selectedAccountId.set($event.value)">
+    <mat-select [value]="selectedAccountId()" (selectionChange)="onAccountChange($event.value)">
       <mat-option value="all">Todas as contas (Consolidado)</mat-option>
       @for (acc of accounts(); track acc.id) {
         <mat-option [value]="acc.id">

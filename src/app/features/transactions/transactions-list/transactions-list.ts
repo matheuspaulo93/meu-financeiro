@@ -17,8 +17,13 @@ import { AccountService } from '../../../core/services/account.service';
 import { CategoryService } from '../../../core/services/category.service';
 import { SubcategoryService } from '../../../core/services/subcategory.service';
 import { TagService } from '../../../core/services/tag.service';
+import { MonthlyBalanceService } from '../../../core/services/monthly-balance.service';
 import { Account, Category, Subcategory, Tag, Transaction } from '../../../models';
 import { formatIsoDate, parseIsoDate } from '../../../shared/util/date.util';
+import {
+  computeTransactionBalanceDelta,
+  isHiddenCreditCardPurchase,
+} from '../../../shared/util/transaction-balance.util';
 import { RecurrenceScopeDialog } from '../recurrence-scope-dialog/recurrence-scope-dialog';
 
 export interface TransactionRowItem {
@@ -65,6 +70,7 @@ export class TransactionsList {
   private readonly categoryService = inject(CategoryService);
   private readonly subcategoryService = inject(SubcategoryService);
   private readonly tagService = inject(TagService);
+  private readonly monthlyBalanceService = inject(MonthlyBalanceService);
   private readonly dialog = inject(MatDialog);
 
   readonly displayedColumns = ['date', 'description', 'category', 'account', 'tags', 'amount', 'actions'];
@@ -75,6 +81,7 @@ export class TransactionsList {
   readonly tags = signal<Tag[]>([]);
   readonly loading = signal(true);
   readonly errorMessage = signal<string | null>(null);
+  readonly openingBalance = signal(0);
 
   readonly selectedMonth = signal(TransactionsList.startOfMonth(new Date()));
   readonly selectedAccountId = signal<string>('all');
@@ -104,64 +111,17 @@ export class TransactionsList {
    */
   readonly tableRows = computed<TableRowItem[]>(() => {
     const allTxs = this.transactions();
-    const accounts = this.accounts();
     const accId = this.selectedAccountId();
     const monthStart = this.selectedMonth();
     const monthStartIso = formatIsoDate(monthStart);
     const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
     const monthEndIso = formatIsoDate(monthEnd);
 
-    // 1. Determina a base do saldo inicial histórico
-    let baseInitialBalance = 0;
-    if (this.considerPreviousBalance() && accId === 'all') {
-      // Saldo consolidado = soma dos saldos iniciais de todas as contas ativas
-      baseInitialBalance = accounts.filter((a) => a.active).reduce((sum, a) => sum + a.initialBalance, 0);
-    } else if (this.considerPreviousBalance()) {
-      const selectedAcc = accounts.find((a) => a.id === accId);
-      baseInitialBalance = selectedAcc ? selectedAcc.initialBalance : 0;
-    }
+    let runningBalance = this.considerPreviousBalance() ? this.openingBalance() : 0;
 
-    // Helper: calcula a variação líquida que uma transação gera na conta ou no consolidado
-    const computeTxDelta = (t: Transaction): number => {
-      // Compras de cartão de crédito não abatem saldo da conta até a fatura vencer
-      if (t.invoiceId && !t.isInvoicePayment) {
-        return 0;
-      }
-
-      if (accId === 'all') {
-        // No consolidado: transferências entre contas do usuário se anulam (delta = 0)
-        if (t.type === 'income') return t.amount;
-        if (t.type === 'expense') return -t.amount;
-        return 0;
-      } else {
-        // Para uma conta específica:
-        if (t.accountId === accId) {
-          if (t.type === 'income') return t.amount;
-          if (t.type === 'expense') return -t.amount;
-          if (t.type === 'transfer') return -t.amount; // saída
-        }
-        if (t.destinationAccountId === accId && t.type === 'transfer') {
-          return t.amount; // entrada
-        }
-        return 0;
-      }
-    };
-
-    // 2. Calcula o saldo de abertura antes do início do mês selecionado
-    let runningBalance = baseInitialBalance;
-    if (this.considerPreviousBalance()) {
-      for (const t of allTxs) {
-        if (t.date < monthStartIso) {
-          runningBalance += computeTxDelta(t);
-        }
-      }
-    }
-
-    // 3. Filtra e ordena as transações do mês selecionado (menor para maior)
     const monthTxs = allTxs
       .filter((t) => {
-        // Ignora compras avulsas de cartão (aparecem dentro da fatura)
-        if (t.invoiceId && !t.isInvoicePayment) {
+        if (isHiddenCreditCardPurchase(t)) {
           return false;
         }
         if (t.date < monthStartIso || t.date > monthEndIso) {
@@ -174,7 +134,6 @@ export class TransactionsList {
       })
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    // 4. Agrupa por dia
     const txsByDate = new Map<string, Transaction[]>();
     for (const t of monthTxs) {
       const list = txsByDate.get(t.date) ?? [];
@@ -182,7 +141,6 @@ export class TransactionsList {
       txsByDate.set(t.date, list);
     }
 
-    // 5. Constrói as linhas da tabela com o agrupador de cada dia
     const rows: TableRowItem[] = [];
     const sortedDates = Array.from(txsByDate.keys()).sort((a, b) => a.localeCompare(b));
 
@@ -193,7 +151,7 @@ export class TransactionsList {
 
       for (const t of dayTxs) {
         rows.push({ kind: 'transaction', transaction: t });
-        const delta = computeTxDelta(t);
+        const delta = computeTransactionBalanceDelta(t, accId);
         if (delta > 0) {
           dayIncome += delta;
         } else if (delta < 0) {
@@ -234,7 +192,7 @@ export class TransactionsList {
   }
 
   constructor() {
-    this.reload();
+    void this.reload();
   }
 
   private static startOfMonth(date: Date): Date {
@@ -245,19 +203,27 @@ export class TransactionsList {
     return typeof localStorage === 'undefined' || localStorage.getItem('transactions-consider-previous-balance') !== 'false';
   }
 
-  togglePreviousBalance(consider: boolean): void {
+  async togglePreviousBalance(consider: boolean): Promise<void> {
     this.considerPreviousBalance.set(consider);
     localStorage.setItem('transactions-consider-previous-balance', String(consider));
+    await this.reload();
   }
 
-  previousMonth(): void {
+  async previousMonth(): Promise<void> {
     const current = this.selectedMonth();
     this.selectedMonth.set(new Date(current.getFullYear(), current.getMonth() - 1, 1));
+    await this.reload();
   }
 
-  nextMonth(): void {
+  async nextMonth(): Promise<void> {
     const current = this.selectedMonth();
     this.selectedMonth.set(new Date(current.getFullYear(), current.getMonth() + 1, 1));
+    await this.reload();
+  }
+
+  async onAccountChange(accountId: string): Promise<void> {
+    this.selectedAccountId.set(accountId);
+    await this.reload();
   }
 
   formatDate(dateIso: string): string {
@@ -351,15 +317,41 @@ export class TransactionsList {
     this.loading.set(true);
     this.errorMessage.set(null);
     try {
-      await this.recurrenceService.runGenerationForAllActive();
-      const [transactions, accounts, categories, subcategories, tags] = await Promise.all([
-        this.transactionService.list(),
+      const monthStart = this.selectedMonth();
+      const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
+      const loadStart = this.considerPreviousBalance()
+        ? new Date(monthStart.getFullYear(), monthStart.getMonth() - 1, 1)
+        : monthStart;
+      const monthStartIso = formatIsoDate(monthStart);
+      const monthEndIso = formatIsoDate(monthEnd);
+      const selectedAccountId = this.selectedAccountId();
+
+      await this.recurrenceService.runGenerationForRange(
+        formatIsoDate(loadStart),
+        monthEndIso,
+      );
+
+      const [accounts, categories, subcategories, tags] = await Promise.all([
         this.accountService.list(),
         this.categoryService.list(),
         this.subcategoryService.list(),
         this.tagService.list(),
       ]);
+      const [transactions, openingBalance] = await Promise.all([
+        selectedAccountId === 'all'
+          ? this.transactionService.listByMonth(monthStartIso, monthEndIso)
+          : this.transactionService.listByMonthForAccount(monthStartIso, monthEndIso, selectedAccountId),
+        this.considerPreviousBalance()
+          ? this.monthlyBalanceService.getPreviousMonthClosingBalance(
+              monthStart,
+              accounts,
+              selectedAccountId,
+            )
+          : Promise.resolve(0),
+      ]);
+
       this.transactions.set(transactions);
+      this.openingBalance.set(openingBalance);
       this.accounts.set(accounts);
       this.categories.set(categories);
       this.subcategories.set(subcategories);
