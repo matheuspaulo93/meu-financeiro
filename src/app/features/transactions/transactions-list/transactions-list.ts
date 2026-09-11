@@ -9,6 +9,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { firstValueFrom } from 'rxjs';
 import { TransactionService } from '../../../core/services/transaction.service';
 import { RecurrenceService } from '../../../core/services/recurrence.service';
@@ -52,6 +53,7 @@ export type TableRowItem = TransactionRowItem | DaySummaryRowItem;
     MatTooltipModule,
     MatFormFieldModule,
     MatSelectModule,
+    MatSlideToggleModule,
   ],
   templateUrl: './transactions-list.html',
   styleUrl: './transactions-list.scss',
@@ -76,6 +78,7 @@ export class TransactionsList {
 
   readonly selectedMonth = signal(TransactionsList.startOfMonth(new Date()));
   readonly selectedAccountId = signal<string>('all');
+  readonly considerPreviousBalance = signal(TransactionsList.loadConsiderPreviousBalance());
 
   readonly monthLabel = computed(() => {
     const label = this.selectedMonth().toLocaleDateString('pt-BR', {
@@ -110,10 +113,10 @@ export class TransactionsList {
 
     // 1. Determina a base do saldo inicial histórico
     let baseInitialBalance = 0;
-    if (accId === 'all') {
+    if (this.considerPreviousBalance() && accId === 'all') {
       // Saldo consolidado = soma dos saldos iniciais de todas as contas ativas
       baseInitialBalance = accounts.filter((a) => a.active).reduce((sum, a) => sum + a.initialBalance, 0);
-    } else {
+    } else if (this.considerPreviousBalance()) {
       const selectedAcc = accounts.find((a) => a.id === accId);
       baseInitialBalance = selectedAcc ? selectedAcc.initialBalance : 0;
     }
@@ -146,9 +149,11 @@ export class TransactionsList {
 
     // 2. Calcula o saldo de abertura antes do início do mês selecionado
     let runningBalance = baseInitialBalance;
-    for (const t of allTxs) {
-      if (t.date < monthStartIso) {
-        runningBalance += computeTxDelta(t);
+    if (this.considerPreviousBalance()) {
+      for (const t of allTxs) {
+        if (t.date < monthStartIso) {
+          runningBalance += computeTxDelta(t);
+        }
       }
     }
 
@@ -234,6 +239,15 @@ export class TransactionsList {
 
   private static startOfMonth(date: Date): Date {
     return new Date(date.getFullYear(), date.getMonth(), 1);
+  }
+
+  private static loadConsiderPreviousBalance(): boolean {
+    return typeof localStorage === 'undefined' || localStorage.getItem('transactions-consider-previous-balance') !== 'false';
+  }
+
+  togglePreviousBalance(consider: boolean): void {
+    this.considerPreviousBalance.set(consider);
+    localStorage.setItem('transactions-consider-previous-balance', String(consider));
   }
 
   previousMonth(): void {

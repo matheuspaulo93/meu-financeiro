@@ -28,6 +28,14 @@
       }
     </mat-select>
   </mat-form-field>
+
+  <mat-slide-toggle
+    [checked]="considerPreviousBalance()"
+    (change)="togglePreviousBalance($event.checked)"
+    aria-label="Considerar saldo anterior"
+  >
+    Considerar Saldo Anterior
+  </mat-slide-toggle>
 </div>
 
 @if (errorMessage()) {
