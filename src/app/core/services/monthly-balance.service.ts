@@ -78,6 +78,44 @@ export class MonthlyBalanceService {
     );
   }
 
+  async invalidateAccountMutation(
+    before?: Account | null,
+    after?: Account | null,
+  ): Promise<void> {
+    const userId = this.requireUserId();
+    const invalidations = new Map<string, { accountId: BalanceScopeAccountId; fromMonth: string }>();
+    const shouldInvalidateAccountScope =
+      (before?.initialBalance ?? 0) !== (after?.initialBalance ?? 0) ||
+      (before?.active ?? false) !== (after?.active ?? false) ||
+      before?.id !== after?.id;
+    const shouldInvalidateAllScope = Boolean(before?.active || after?.active) && shouldInvalidateAccountScope;
+
+    if (shouldInvalidateAccountScope) {
+      if (before?.id) {
+        invalidations.set(this.scopeKey(before.id), {
+          accountId: before.id,
+          fromMonth: '0001-01',
+        });
+      }
+      if (after?.id) {
+        invalidations.set(this.scopeKey(after.id), {
+          accountId: after.id,
+          fromMonth: '0001-01',
+        });
+      }
+    }
+
+    if (shouldInvalidateAllScope) {
+      invalidations.set(this.scopeKey('all'), { accountId: 'all', fromMonth: '0001-01' });
+    }
+
+    await Promise.all(
+      Array.from(invalidations.values()).map(({ accountId, fromMonth }) =>
+        this.deleteSnapshotsFromMonth(userId, accountId, fromMonth),
+      ),
+    );
+  }
+
   private async getClosingBalance(
     targetMonth: Date,
     accounts: Account[],
