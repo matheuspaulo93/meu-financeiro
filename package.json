@@ -1,6 +1,9 @@
 {
   "name": "meu-financeiro",
   "version": "0.0.0",
+  "engines": {
+    "node": ">=24.15.0 <25"
+  },
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
