@@ -316,11 +316,14 @@ export class MonthlyBalanceService {
     const snapshot: MonthlyBalanceSnapshot = {
       userId,
       scopeType,
-      accountId: accountId === 'all' ? undefined : accountId,
       month,
       closingBalance,
       updatedAt: new Date().toISOString(),
     };
+
+    if (accountId !== 'all') {
+      snapshot.accountId = accountId;
+    }
 
     await setDoc(
       doc(db, BALANCES_COLLECTION, this.snapshotId(userId, accountId, month)),
