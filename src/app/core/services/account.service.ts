@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import {
   addDoc,
   collection,
@@ -12,11 +12,14 @@ import {
 import { db, auth } from '../firebase/firebase';
 import { stripUndefined } from '../firebase/firestore.util';
 import { Account } from '../../models';
+import { MonthlyBalanceService } from './monthly-balance.service';
 
 const COLLECTION = 'accounts';
 
 @Injectable({ providedIn: 'root' })
 export class AccountService {
+  private readonly monthlyBalanceService = inject(MonthlyBalanceService);
+
   private requireUserId(): string {
     const uid = auth.currentUser?.uid;
     if (!uid) {
@@ -47,14 +50,33 @@ export class AccountService {
   async create(data: Omit<Account, 'id' | 'userId'>): Promise<string> {
     const userId = this.requireUserId();
     const ref = await addDoc(collection(db, COLLECTION), stripUndefined({ ...data, userId }));
+    await this.monthlyBalanceService.invalidateAccountMutation(null, {
+      id: ref.id,
+      userId,
+      ...data,
+    });
     return ref.id;
   }
 
   async update(id: string, data: Partial<Omit<Account, 'id' | 'userId'>>): Promise<void> {
+    const current = await this.get(id);
     await updateDoc(doc(db, COLLECTION, id), stripUndefined(data));
+    if (current) {
+      await this.monthlyBalanceService.invalidateAccountMutation(current, {
+        ...current,
+        ...data,
+      });
+    }
   }
 
   async setActive(id: string, active: boolean): Promise<void> {
+    const current = await this.get(id);
     await updateDoc(doc(db, COLLECTION, id), { active });
+    if (current) {
+      await this.monthlyBalanceService.invalidateAccountMutation(current, {
+        ...current,
+        active,
+      });
+    }
   }
 }

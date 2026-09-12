@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import {
   addDoc,
   collection,
@@ -15,6 +15,7 @@ import { db, auth } from '../firebase/firebase';
 import { stripUndefined } from '../firebase/firestore.util';
 import { Recurrence, Transaction } from '../../models';
 import { addFrequencyStep, formatIsoDate, parseIsoDate } from '../../shared/util/date.util';
+import { MonthlyBalanceService } from './monthly-balance.service';
 
 const RECURRENCES_COLLECTION = 'recurrences';
 const TRANSACTIONS_COLLECTION = 'transactions';
@@ -23,6 +24,8 @@ export type RecurrenceScope = 'only' | 'future';
 
 @Injectable({ providedIn: 'root' })
 export class RecurrenceService {
+  private readonly monthlyBalanceService = inject(MonthlyBalanceService);
+
   private requireUserId(): string {
     const uid = auth.currentUser?.uid;
     if (!uid) {
@@ -63,7 +66,55 @@ export class RecurrenceService {
 
   /** gera as transações faltantes de uma recorrência (id determinístico evita duplicidade) */
   async generateOccurrences(recurrence: Recurrence): Promise<void> {
-    const dates = this.computeOccurrenceDates(recurrence);
+    await this.persistOccurrences(recurrence, this.computeOccurrenceDates(recurrence));
+  }
+
+  async generateOccurrencesInRange(
+    recurrence: Recurrence,
+    fromDate: string,
+    toDate: string,
+  ): Promise<void> {
+    await this.persistOccurrences(
+      recurrence,
+      this.computeOccurrenceDates(recurrence, { fromDate, toDate }),
+    );
+  }
+
+  /** roda a geração para todas as recorrências ativas do usuário; chamar ao abrir a tela de Transações */
+  async runGenerationForAllActive(): Promise<void> {
+    const userId = this.requireUserId();
+    const q = query(
+      collection(db, RECURRENCES_COLLECTION),
+      where('userId', '==', userId),
+      where('active', '==', true),
+    );
+    const snapshot = await getDocs(q);
+    const recurrences = snapshot.docs.map(
+      (d) => ({ id: d.id, ...(d.data() as Omit<Recurrence, 'id'>) }) as Recurrence,
+    );
+    for (const recurrence of recurrences) {
+      await this.generateOccurrences(recurrence);
+    }
+  }
+
+  async runGenerationForRange(fromDate: string, toDate: string): Promise<void> {
+    const userId = this.requireUserId();
+    const q = query(
+      collection(db, RECURRENCES_COLLECTION),
+      where('userId', '==', userId),
+      where('active', '==', true),
+    );
+    const snapshot = await getDocs(q);
+    const recurrences = snapshot.docs.map(
+      (d) => ({ id: d.id, ...(d.data() as Omit<Recurrence, 'id'>) }) as Recurrence,
+    );
+    for (const recurrence of recurrences) {
+      await this.generateOccurrencesInRange(recurrence, fromDate, toDate);
+    }
+  }
+
+  private async persistOccurrences(recurrence: Recurrence, dates: string[]): Promise<void> {
+    const createdTransactions: Transaction[] = [];
     for (const date of dates) {
       const ref = doc(db, TRANSACTIONS_COLLECTION, `${recurrence.id}_${date}`);
       const existing = await getDoc(ref);
@@ -88,23 +139,13 @@ export class RecurrenceService {
         updatedAt: now,
       };
       await setDoc(ref, stripUndefined(transactionData));
+      createdTransactions.push({ id: ref.id, ...transactionData });
     }
-  }
 
-  /** roda a geração para todas as recorrências ativas do usuário; chamar ao abrir a tela de Transações */
-  async runGenerationForAllActive(): Promise<void> {
-    const userId = this.requireUserId();
-    const q = query(
-      collection(db, RECURRENCES_COLLECTION),
-      where('userId', '==', userId),
-      where('active', '==', true),
-    );
-    const snapshot = await getDocs(q);
-    const recurrences = snapshot.docs.map(
-      (d) => ({ id: d.id, ...(d.data() as Omit<Recurrence, 'id'>) }) as Recurrence,
-    );
-    for (const recurrence of recurrences) {
-      await this.generateOccurrences(recurrence);
+    if (createdTransactions.length > 0) {
+      await this.monthlyBalanceService.invalidateTransactionMutations(
+        createdTransactions.map((transaction) => ({ after: transaction })),
+      );
     }
   }
 
@@ -119,19 +160,32 @@ export class RecurrenceService {
     scope: RecurrenceScope,
   ): Promise<void> {
     if (scope === 'only' || !transaction.recurrenceId) {
+      const before = transaction;
+      const now = new Date().toISOString();
       await updateDoc(
         doc(db, TRANSACTIONS_COLLECTION, transaction.id),
-        stripUndefined({ ...data, updatedAt: new Date().toISOString() }),
+        stripUndefined({ ...data, updatedAt: now }),
       );
+      await this.monthlyBalanceService.invalidateTransactionMutation(before, {
+        ...transaction,
+        ...data,
+        updatedAt: now,
+      });
       return;
     }
 
     const oldRecurrence = await this.get(transaction.recurrenceId);
     if (!oldRecurrence) {
+      const now = new Date().toISOString();
       await updateDoc(
         doc(db, TRANSACTIONS_COLLECTION, transaction.id),
-        stripUndefined({ ...data, updatedAt: new Date().toISOString() }),
+        stripUndefined({ ...data, updatedAt: now }),
       );
+      await this.monthlyBalanceService.invalidateTransactionMutation(transaction, {
+        ...transaction,
+        ...data,
+        updatedAt: now,
+      });
       return;
     }
 
@@ -174,6 +228,7 @@ export class RecurrenceService {
       if (transaction.recurrenceId) {
         await this.addExcludedDate(transaction.recurrenceId, transaction.date);
       }
+      await this.monthlyBalanceService.invalidateTransactionMutation(transaction, null);
       return;
     }
 
@@ -198,22 +253,47 @@ export class RecurrenceService {
       where('recurrenceId', '==', recurrenceId),
     );
     const snapshot = await getDocs(q);
-    const deletions = snapshot.docs
+    const removedTransactions = snapshot.docs
       .filter((d) => (d.data()['date'] as string) >= fromDate)
-      .map((d) => deleteDoc(d.ref));
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<Transaction, 'id'>) }) as Transaction);
+    const deletions = removedTransactions.map((transaction) =>
+      deleteDoc(doc(db, TRANSACTIONS_COLLECTION, transaction.id)),
+    );
     await Promise.all(deletions);
+    if (removedTransactions.length > 0) {
+      await this.monthlyBalanceService.invalidateTransactionMutations(
+        removedTransactions.map((transaction) => ({ before: transaction })),
+      );
+    }
   }
 
   /** calcula as datas ISO de ocorrência: limitada por count, ou por uma janela móvel quando indeterminada */
-  private computeOccurrenceDates(recurrence: Recurrence): string[] {
+  private computeOccurrenceDates(
+    recurrence: Recurrence,
+    options?: { fromDate?: string; toDate?: string },
+  ): string[] {
     const dates: string[] = [];
-    let current = parseIsoDate(recurrence.startDate);
+    const startDate = parseIsoDate(recurrence.startDate);
+    const fromDate = options?.fromDate ? parseIsoDate(options.fromDate) : startDate;
+    const toDate = options?.toDate ? parseIsoDate(options.toDate) : null;
     const horizon = recurrence.endType === 'indeterminate' ? this.indeterminateHorizon() : null;
     const maxCount = recurrence.endType === 'count' ? (recurrence.occurrenceCount ?? 0) : Infinity;
+    const upperBound = toDate && horizon ? (toDate < horizon ? toDate : horizon) : (toDate ?? horizon);
 
-    let count = 0;
+    if (upperBound && startDate > upperBound) {
+      return dates;
+    }
+
+    const { date: firstDate, stepsAdvanced } = this.advanceToRangeStart(
+      startDate,
+      recurrence.frequency,
+      fromDate,
+    );
+
+    let current = firstDate;
+    let count = stepsAdvanced;
     while (count < maxCount) {
-      if (horizon && current > horizon) {
+      if (upperBound && current > upperBound) {
         break;
       }
       const iso = formatIsoDate(current);
@@ -233,5 +313,45 @@ export class RecurrenceService {
   private indeterminateHorizon(): Date {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth() + 12, 0);
+  }
+
+  private advanceToRangeStart(
+    startDate: Date,
+    frequency: Recurrence['frequency'],
+    targetDate: Date,
+  ): { date: Date; stepsAdvanced: number } {
+    if (startDate >= targetDate) {
+      return { date: startDate, stepsAdvanced: 0 };
+    }
+
+    let stepsAdvanced = 0;
+
+    switch (frequency) {
+      case 'daily':
+        stepsAdvanced = this.diffInDays(startDate, targetDate);
+        break;
+      case 'weekly':
+        stepsAdvanced = Math.floor(this.diffInDays(startDate, targetDate) / 7);
+        break;
+      case 'monthly':
+        stepsAdvanced =
+          (targetDate.getFullYear() - startDate.getFullYear()) * 12 +
+          (targetDate.getMonth() - startDate.getMonth());
+        break;
+    }
+
+    let current = addFrequencyStep(startDate, frequency, stepsAdvanced);
+    while (current < targetDate) {
+      stepsAdvanced++;
+      current = addFrequencyStep(startDate, frequency, stepsAdvanced);
+    }
+
+    return { date: current, stepsAdvanced };
+  }
+
+  private diffInDays(startDate: Date, endDate: Date): number {
+    const startUtc = Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const endUtc = Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    return Math.floor((endUtc - startUtc) / (1000 * 60 * 60 * 24));
   }
 }

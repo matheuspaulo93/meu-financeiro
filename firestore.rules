@@ -57,6 +57,11 @@ service cloud.firestore {
       allow create: if isOwnerOnCreate();
     }
 
+    match /monthlyBalances/{docId} {
+      allow read, update, delete: if isOwner();
+      allow create: if isOwnerOnCreate();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
